@@ -1,13 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: |
   First website
-Parameters:
-  
 Resources:
   CFNInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId:
+      ImageId: ami-0a8b4cd432b1c3063
       InstanceType: t2.micro
       KeyName: firstkey
       SecurityGroups:
