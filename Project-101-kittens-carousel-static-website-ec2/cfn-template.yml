@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  First website
+Parameters:
+  
+Resources:
+  CFNInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+      InstanceType: t2.micro
+      KeyName: firstkey
+      SecurityGroups:
+        - cfn-sec-group
+      Tags:
+        - Key: name
+          Value: First-project
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #! /bin/bash
+            yum update -y
+            yum install httpd
+            systemctl start httpd
+            systemctl enable httpd
+            cd /var/www/html
+            
