@@ -1,8 +1,20 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: |
   First website
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-76f0061f
+    us-west-1:
+      AMI: ami-655a0a20
+    eu-west-1:
+      AMI: ami-7fd4e10b
+    ap-southeast-1:
+      AMI: ami-72621c20
+    ap-northeast-1:
+      AMI: ami-8e08a38f
 Resources:
-  CFNInstance:
+  Ec2Instance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: ami-0a8b4cd432b1c3063
