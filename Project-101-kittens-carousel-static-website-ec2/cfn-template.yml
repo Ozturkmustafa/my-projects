@@ -25,7 +25,7 @@ Resources:
         - cfn-sec-group
       Tags:
         - Key: Name
-          Value: First-project
+          Value: First-Project
       UserData:
         Fn::Base64:
           !Sub |
