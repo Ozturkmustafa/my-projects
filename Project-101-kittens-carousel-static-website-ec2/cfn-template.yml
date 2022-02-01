@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+   Kittens Carousel is a static website application deployed with Apache Web Server on AWS Elastic 
+  Compute Cloud (EC2) Instance using AWS Cloudformation Service.
+Mappings:
+  RegionMap:
+    us-east-1:
+      AMI: ami-76f0061f
+    us-west-1:
+      AMI: ami-655a0a20
+    eu-west-1:
+      AMI: ami-7fd4e10b
+    ap-southeast-1:
+      AMI: ami-72621c20
+    ap-northeast-1:
+      AMI: ami-8e08a38f
+Resources:
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0a8b4cd432b1c3063
+      InstanceType: t2.micro
+      KeyName: firstkey
+      SecurityGroups:
+        - cfn-sec-group
+      Tags:
+        - Key: Name
+          Value: First-Project
+      UserData:
+        Fn::Base64:
+          !Sub |
+          #! /bin/bash
+            
+          sudo yum update -y
+          sudo yum install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+          sudo chmod -R 777 var/www/html
+          cd /var/www/html
+          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/Project-101-kittens-carousel-static-website-ec2/static-web/index.html
+          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/Project-101-kittens-carousel-static-website-ec2/static-web/cat0.jpg
+          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/Project-101-kittens-carousel-static-website-ec2/static-web/cat1.jpg
+          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/Project-101-kittens-carousel-static-website-ec2/static-web/cat2.jpg
+          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/Project-101-kittens-carousel-static-website-ec2/static-web/cat3.png
+            
+            
