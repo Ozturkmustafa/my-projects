@@ -1,30 +1,25 @@
 AWSTemplateFormatVersion: 2010-09-09
-
 Description: |
-  The Roman Numerals Converter Application aims to convert the given number to the Roman numerals. The application is to be coded in Python and deployed as a web application with Flask on AWS Elastic Compute Cloud (EC2) Instance using AWS Cloudformation and CLI Services.
   
 Parameters:
-  myVPC:
+  paramVPC:
     Description: Select your VPC
     Type: AWS::EC2::VPC::Id
 
-  mySubnets:
+   paramSubnets:
     Description: Select at least 2 subnets
     Type: List<AWS::EC2::Subnet::Id>
 
-  myKP:
-    Description: Select your Key
+  paramKP:
+    Description: 
     Type: AWS::EC2::KeyPair::KeyName
+    Default: 
 
-  myIT:
-    Description: Select instance type
-    Type: String
-    Default: t2.micro 
-    AllowedValues: 
-     - t2.micro
-     - t3.micro
-     - t2.nano
-     - t3.nano
+  paramIT:
+    Description: Select instance 
+    Type: string
+    Default: t2.micro
+    "AllowedValues" : [ "t1.micro", "t2.nano", "t2.micro", "t2.small", "t2.medium", "t2.large", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "c1.medium", "c1.xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "g2.2xlarge", "g2.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "d2.xlarge", "d2.2xlarge", "d2.4xlarge", "d2.8xlarge", "hi1.4xlarge", "hs1.8xlarge", "cr1.8xlarge", "cc2.8xlarge", "cg1.4xlarge"]
   
 Mappings:
   RegionImageMap:
@@ -40,7 +35,7 @@ Mappings:
       AMI: ami-058b1b7fe545997ae
   
 Resources:
-  myALB:
+   myALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       SecurityGroups:
@@ -61,6 +56,7 @@ Resources:
   myASG:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
+      AutoScalingGroupName: "String"
       AvailabilityZones: !GetAZs 
       DesiredCapacity: "2"
       HealthCheckGracePeriod: 90
@@ -68,11 +64,11 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref myLT
         Version: "1"
+      MaxInstanceLifetime: Number
       MaxSize: "3" # Required
       MinSize: "1" # Required
       TargetGroupARNs:
         - !Ref myTG
-
   myCPUPolicy:
     Type: AWS::AutoScaling::ScalingPolicy
     Properties:
@@ -81,8 +77,7 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 60.0
-
+        TargetValue: 60.0  
   myLT:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -91,22 +86,35 @@ Resources:
          - RegionImageMap
          - !Ref AWS::Region
          - AMI
-        InstanceType: !Ref myIT
-        KeyName: !Ref myKP
+        InstanceType: !Ref paramIT
+        KeyName: !Ref paramKP
         SecurityGroupIds:
           - !GetAtt mySG.GroupId
         UserData: !Base64 |
-          #!/bin/bash
+          #! /bin/bash
           yum update -y
-          pip3 install flask
-          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/Project-001-Roman-Numerals-Converter/app.py
-          mkdir templates && cd templates
-          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/Project-001-Roman-Numerals-Converter/templates/index.html
-          wget https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/Project-001-Roman-Numerals-Converter/templates/result.html
-          cd ..
-          python3 app.py
+          yum install -y httpd
+          TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` \
+          && PRIVATE_IP=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4`
+          TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"` \
+          && PUBLIC_IP=`curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4` 
+          DATE_TIME=`date`
+          chmod -R 777 /var/www/html
+          echo "<html>
+          <head>
+              <title> Congratulations! You have created an instance from Launch Template</title>
+          </head>
+          <body>
+              <h1>This web server is launched from launch template by MustafA</h1>
+              <p>This instance is created at <b>$DATE_TIME</b></p>
+              <p>Private IP address of this instance is <b>$PRIVATE_IP</b></p>
+              <p>Public IP address of this instance is <b>$PUBLIC_IP</b></p>
+          </body>
+          </html>" > /var/www/html/index.html
+          systemctl start httpd
+          systemctl enable httpd       
 
-  
+
   myTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -114,9 +122,8 @@ Resources:
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 5
       Port: 80
-      Protocol: HTTP
       UnhealthyThresholdCount: 3
-      VpcId: !Ref myVPC
+      VpcId: !Ref paramVPC
 
   mySG:
     Type: AWS::EC2::SecurityGroup
@@ -131,12 +138,12 @@ Resources:
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
-      VpcId: !Ref myVPC z
-  
+      VpcId: !Ref paramVPC
+
 Outputs:
-  AppUrl:
-    Description: URL of the ALB
-    Value: !Join 
-       - ''
-       - - 'http://'
-         - !GetAtt myALB.DNSName
+  AppUrl: 
+  Description: URL of the ALB
+  Value: !Join
+  - ''
+  - -  'http://'
+    -  !GetAtt myALB.DNSName
