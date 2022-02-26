@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+
+Mappings:
+    
+Parameters:
+  myVPC:
+    Description: Select your VPC
+    Type: AWS::EC2::VPC::Id
+  
+Resources:
+
+  myLT:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !FindInMap 
+         - RegionImageMap
+         - !Ref AWS::Region
+         - AMI
+        InstanceType: !Ref myIT
+        KeyName: !Ref myKP
+        SecurityGroupIds:
+          - !GetAtt mySG.GroupId
+        UserData: !Base64 |
+          #!/bin/bash
+          yum update -y
+          yum install python$ -y
+          pip3 install flask
+          pip3 install flask-mysql
+          pip3 install sqlalchemy
+          pip3 install Falsk-SQLAlchemy
+          cd /home/ec2
+          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/phonebook-app.py
+          mkdir templates && cd templates
+          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/add-update.html
+          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/delete.html
+          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/index.html
+          cd ..
+          python3 phonebook-app.py
+
+  myTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref myVPC
+
+  RDSSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enables HTTP # Required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !GettAtt ALCSecGroup.GroupId
+      VpcId: !Ref myVPC
+  
+  ALCSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enables HTTP # Required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref myVPC
+
+  EC2SecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "String" # Required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !GettAtt ALCSecGroup.GroupId
+      VpcId: !Ref myVPC
+  
+Outputs:
