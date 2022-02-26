@@ -40,12 +40,13 @@ Mappings:
     
   
 Resources:
-  MyDB:
+  myDB:
     Type: 'AWS::RDS::DBInstance'
     Properties:
-      DBInstanceIdentifier: clarusway_phonebook
       DBName: clarusway_phonebook
-      DBInstanceClass: db.t2.micre
+      DBSecurityGroups: 
+        - !Ref RDSSecGroup
+      DBInstanceClass: db.t2.micro
       AllocatedStorage: "20"
       Engine: MySQL
       EngineVersion: 8.0.19
@@ -56,7 +57,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       SecurityGroups:
-        - !GetAtt mySG.GroupId
+        - !GetAtt ALBSecGroup.GroupId
       Subnets: !Ref mySubnets
       Type: application
 
@@ -78,7 +79,7 @@ Resources:
       HealthCheckType: ELB
       LaunchTemplate:
         LaunchTemplateId: !Ref myLT
-        Version: "1"
+        Version: !GetAtt WebServerLT.LatestVersionNumber
       MaxSize: "3" # Required
       MinSize: "1" # Required
       TargetGroupARNs:
@@ -97,30 +98,30 @@ Resources:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
-        ImageId: !FindInMap 
-         - RegionImageMap
-         - !Ref AWS::Region
-         - AMI
+        ImageId: ami-033b95fb8079dc481 
         InstanceType: !Ref myIT
         KeyName: !Ref myKP
         SecurityGroupIds:
-          - !GetAtt mySG.GroupId
-        UserData: !Base64 |
-          #!/bin/bash
-          yum update -y
-          yum install python$ -y
-          pip3 install flask
-          pip3 install flask-mysql
-          pip3 install sqlalchemy
-          pip3 install Falsk-SQLAlchemy
-          cd /home/ec2
-          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/phonebook-app.py
-          mkdir templates && cd templates
-          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/add-update.html
-          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/delete.html
-          curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/index.html
-          cd ..
-          python3 phonebook-app.py
+          - !GetAtt EC2SecGroup.GroupId
+        UserData: !Base64
+          !Sub 
+            - |
+              #!/bin/bash
+              yum update -y
+              yum install python$ -y
+              pip3 install flask
+              pip3 install flask-mysql
+              pip3 install sqlalchemy
+              pip3 install Falsk-SQLAlchemy
+              cd /home/ec2
+              curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/phonebook-app.py -o phonebook-app.py
+              mkdir templates && cd templates
+              curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/add-update.html -o add-update.html
+              curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/delete.html -o delete.html
+              curl https://raw.githubusercontent.com/Ozturkmustafa/my-projects/main/python/projects_night_fighter/night_fighter-Phonebook-Application/templates/index.html -o index.html
+              cd ..
+              python3 phonebook-app.py
+            - MyDBURI: !GetAtt myDB.Endpoint.Address
 
   myTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -134,20 +135,17 @@ Resources:
       VpcId: !Ref myVPC
 
   RDSSecGroup:
-    Type: AWS::EC2::SecurityGroup
+    Type: AWS::RDS::DBSecurityGroup
     Properties:
-      GroupDescription: Enables HTTP # Required
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          SourceSecurityGroupId: !GettAtt ALCSecGroup.GroupId
-      VpcId: !Ref myVPC
+      DBSecurityGroupIngress: #required
+        - CIDRIP: 0.0.0.0/0
+        - EC2SecurityGroupId: !GetAtt EC2SecGroup.GroupId
+      GroupDescription: This DB for Back-end Access #required
   
-  ALCSecGroup:
+  ALBSecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enables HTTP # Required
+      GroupDescription: Enables HTTP for ALB # Required
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -163,7 +161,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          SourceSecurityGroupId: !GettAtt ALCSecGroup.GroupId
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
@@ -171,3 +169,8 @@ Resources:
       VpcId: !Ref myVPC
   
 Outputs:
+  WebsiteURL:
+    Value: !Sub 
+      - http://${ALBAddress}
+      - ALBAddress: !GetAtt myALB.DNSName
+    Description: Phonebook Application Load Balancer URL
