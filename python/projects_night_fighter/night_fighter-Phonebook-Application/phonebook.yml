@@ -1,15 +1,98 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: |
+The Phonebook Application aims to create a phonebook application in Python and deployed as a web application with Flask on AWS Application Load Balancer with Auto Scaling Group of Elastic Compute Cloud (EC2) Instances and Relational Database Service (RDS) using AWS Cloudformation Service.
 
-Mappings:
-    
 Parameters:
   myVPC:
     Description: Select your VPC
     Type: AWS::EC2::VPC::Id
+
+  mySubnets:
+    Description: Select at least 2 subnets
+    Type: List<AWS::EC2::Subnet::Id>
+
+  myKP:
+    Description: Select your Key
+    Type: AWS::EC2::KeyPair::KeyName
+
+  myIT:
+    Description: Select instance type
+    Type: String
+    Default: t2.micro 
+    AllowedValues: 
+     - t2.micro
+     - t3.micro
+     - t2.nano
+     - t3.nano
+
+Mappings:
+  RegionImageMap:
+    us-east-1:
+      AMI: ami-0dc2d3e4c0f9ebd18
+    us-east-2:
+      AMI: ami-0233c2d874b811deb
+    us-west-1:
+      AMI: ami-0ed05376b59b90e46
+    us-west-2:
+      AMI: ami-0dc8f589abe99f538
+    eu-west-1:
+      AMI: ami-058b1b7fe545997ae
+    
   
 Resources:
+  MyDB:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBInstanceIdentifier: clarusway_phonebook
+      DBName: clarusway_phonebook
+      DBInstanceClass: db.t2.micre
+      AllocatedStorage: "20"
+      Engine: MySQL
+      EngineVersion: 8.0.19
+      MasterUsername: admin
+      MasterUserPassword: Pl123456789
 
+  myALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      SecurityGroups:
+        - !GetAtt mySG.GroupId
+      Subnets: !Ref mySubnets
+      Type: application
+
+  myListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: # Required
+        - Type: forward
+          TargetGroupArn: !Ref myTG
+      LoadBalancerArn: !Ref myALB # Required
+      Port: 80
+      Protocol: HTTP
+  myASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AvailabilityZones: !GetAZs
+      DesiredCapacity: "2"
+      HealthCheckGracePeriod: 90
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !Ref myLT
+        Version: "1"
+      MaxSize: "3" # Required
+      MinSize: "1" # Required
+      TargetGroupARNs:
+        - !Ref myTG
+
+  myCPUPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref myASG  # Required
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 60.0
   myLT:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -75,11 +158,15 @@ Resources:
   EC2SecGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: "String" # Required
+      GroupDescription: Enable HTTP fo Flask Web Server and SSH for getting into EC2 # Required
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+          SourceSecurityGroupId: !GettAtt ALCSecGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
           SourceSecurityGroupId: !GettAtt ALCSecGroup.GroupId
       VpcId: !Ref myVPC
   
