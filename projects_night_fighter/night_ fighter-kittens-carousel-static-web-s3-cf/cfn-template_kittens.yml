@@ -15,6 +15,7 @@ Resources:
   KittensS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
+      AccessControl: PublicRead
       BucketName: !Ref KittensDomainName
       OwnershipControls:
         Rules:
@@ -47,6 +48,7 @@ Resources:
   KittensCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
+      CertificateTransparencyLoggingPreference: ENABLED 
       DomainName: !Ref KittensDomainName # Required
       DomainValidationOptions:
         - DomainName: !Ref KittensDomainName
